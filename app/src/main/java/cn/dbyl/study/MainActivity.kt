@@ -38,23 +38,24 @@ class MainActivity : AppCompatActivity() {
         buttonGpio16.setDirection(Gpio.DIRECTION_OUT_INITIALLY_HIGH)
         buttonGpio26.setDirection(Gpio.DIRECTION_OUT_INITIALLY_LOW)
 
-        buttonGpio16.value=isEabled
-        buttonGpio26.value=!isEabled
-        pwm0.setPwmFrequencyHz(100.0)
-        pwm0.setPwmDutyCycle(100.0)
-        pwm1.setPwmFrequencyHz(100.0)
-        pwm1.setPwmDutyCycle(100.0)
-        pwm0.setEnabled(isEabled)
-        pwm1.setEnabled(!isEabled)
+//        buttonGpio16.value=isEabled
+//        buttonGpio26.value=!isEabled
+        pwm0.setPwmFrequencyHz(30.0)
+        pwm0.setPwmDutyCycle(5.0)
 
-        for (i in 1..100) {
-            Thread.sleep(2000)
-            pwm0.setEnabled(!isEabled)
-            pwm1.setEnabled(isEabled)
-            buttonGpio16.value=isEabled
-            buttonGpio26.value=!isEabled
-            isEabled=!isEabled
-        }
+        pwm1.setPwmFrequencyHz(100.0)
+        pwm1.setPwmDutyCycle(20.0)
+        pwm0.setEnabled(isEabled)
+//        pwm1.setEnabled(!isEabled)
+//
+//        for (i in 1..100) {
+//            Thread.sleep(2000)
+//            pwm0.setEnabled(!isEabled)
+//            pwm1.setEnabled(isEabled)
+//            buttonGpio16.value=isEabled
+//            buttonGpio26.value=!isEabled
+//            isEabled=!isEabled
+//        }
 
     }
 
