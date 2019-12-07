@@ -1,4 +1,4 @@
-package cn.dbyl.study
+package cn.dbyl.server
 
 import android.support.test.InstrumentationRegistry
 import android.support.test.runner.AndroidJUnit4

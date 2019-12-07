@@ -1,4 +1,4 @@
-package cn.dbyl.study.utils
+package cn.dbyl.server.utils
 
 import android.content.Context
 import android.net.ConnectivityManager

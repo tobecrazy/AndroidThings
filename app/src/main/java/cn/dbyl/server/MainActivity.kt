@@ -1,12 +1,10 @@
-package cn.dbyl.study
+package cn.dbyl.server
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.util.Log
 import com.google.android.things.pio.Gpio
 import com.google.android.things.pio.GpioCallback
 import com.google.android.things.pio.PeripheralManager
-import kotlin.random.Random
 
 
 /**
@@ -32,6 +30,7 @@ class MainActivity : AppCompatActivity() {
     lateinit var buttonGpio23: Gpio
     lateinit var buttonGpio24: Gpio
     lateinit var buttonGpio20: Gpio
+    lateinit var buttonGpio26: Gpio
     lateinit var buttonGpio21: Gpio
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -42,13 +41,14 @@ class MainActivity : AppCompatActivity() {
 //        Thread.sleep(5000)
 //        backward()
 //        Thread.sleep(5000)
-        left()
+//        left()
 //        Thread.sleep(3000)
 //        right()
-        Thread.sleep(13000)
+//        Thread.sleep(13000)
+//        stop()
 
-//        buttonGpio20.setDirection(Gpio.ACTIVE_HIGH)
-        stop()
+
+
     }
 
     private fun initial() {
@@ -60,15 +60,21 @@ class MainActivity : AppCompatActivity() {
         buttonGpio24 = pioService.openGpio("BCM24")
         buttonGpio20 = pioService.openGpio("BCM20")
         buttonGpio21 = pioService.openGpio("BCM21")
+        buttonGpio26= pioService.openGpio("BCM26")
         buttonGpio4.setDirection(Gpio.DIRECTION_OUT_INITIALLY_HIGH)
         buttonGpio17.setDirection(Gpio.DIRECTION_OUT_INITIALLY_HIGH)
         buttonGpio23.setDirection(Gpio.DIRECTION_OUT_INITIALLY_HIGH)
         buttonGpio24.setDirection(Gpio.DIRECTION_OUT_INITIALLY_HIGH)
-        buttonGpio20.setDirection(Gpio.DIRECTION_OUT_INITIALLY_LOW)
+        buttonGpio20.setDirection(Gpio.DIRECTION_OUT_INITIALLY_HIGH)
         buttonGpio21.setDirection(Gpio.DIRECTION_IN)
         buttonGpio21.setActiveType(Gpio.ACTIVE_HIGH)
         buttonGpio21.setEdgeTriggerType(Gpio.EDGE_BOTH)
         buttonGpio21.registerGpioCallback(mGpioCallback)
+
+        buttonGpio26.setDirection(Gpio.DIRECTION_IN)
+        buttonGpio26.setActiveType(Gpio.ACTIVE_HIGH)
+        buttonGpio26.setEdgeTriggerType(Gpio.EDGE_BOTH)
+        buttonGpio26.registerGpioCallback(mGpioCallback)
     }
 
     fun direction(a: Boolean, b: Boolean, c: Boolean, d: Boolean) {
@@ -102,6 +108,11 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         stop()
         super.onDestroy()
+    }
+
+    fun getDistances()
+    {
+
     }
 
     var mGpioCallback: GpioCallback = object : GpioCallback {

@@ -1,4 +1,4 @@
-package cn.dbyl.study
+package cn.dbyl.server
 
 import org.junit.Test
 

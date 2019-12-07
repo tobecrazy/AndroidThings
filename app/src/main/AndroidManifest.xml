@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="cn.dbyl.study">
+    package="cn.dbyl.server">
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.CAMERA" />
@@ -12,13 +12,13 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
-        android:name=".CoreApp"
+        android:name="cn.dbyl.server.CoreApp"
         android:allowBackup="true"
         android:label="@string/app_name">
         <uses-library android:name="com.google.android.things" />
 
         <activity
-            android:name=".MainActivity"
+            android:name="cn.dbyl.server.MainActivity"
             android:screenOrientation="landscape"
             android:theme="@style/AppTheme">
             <intent-filter>
