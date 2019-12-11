@@ -35,6 +35,8 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
     compileOnly 'com.google.android.things:androidthings:1.0'
     implementation"org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    //for android webserver
+    implementation 'org.nanohttpd:nanohttpd:2.3.1'
     implementation 'com.google.android.things.contrib:driver-button:1.0'
     //for HCSR-04
     implementation 'com.leinardi.android.things:driver-hcsr04:1.0'

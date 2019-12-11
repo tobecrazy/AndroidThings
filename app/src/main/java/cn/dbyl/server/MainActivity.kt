@@ -11,13 +11,14 @@ import android.os.Handler
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import cn.dbyl.server.utils.GpioBordManager
+import cn.dbyl.server.utils.NetWorkUtils
+import cn.dbyl.server.web.AndroidWebServer
 import com.google.android.things.pio.Gpio
 import com.google.android.things.pio.GpioCallback
 import com.google.android.things.pio.PeripheralManager
 import com.google.android.things.pio.Pwm
 import com.leinardi.android.things.driver.hcsr04.Hcsr04SensorDriver
 import java.io.IOException
-import java.util.*
 
 
 /**
@@ -37,7 +38,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     var i2c1: String? = null
     var distance: Int = 11
 
-
+    private var mHttpServer: AndroidWebServer? = null
     private var mHandler: Handler? = null
 
     private var mProximitySensorDriver: Hcsr04SensorDriver? = null
@@ -57,6 +58,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        mHttpServer = AndroidWebServer(NetWorkUtils.getLocalIpAddress(this), 8972)
+        mHttpServer?.start()
+
         initial()
         initialDistanceCheck("BCM20", "BCM26")
 
@@ -93,7 +97,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private fun initial() {
         val pioService = PeripheralManager.getInstance()
         pwm1 = pioService.openPwm(GpioBordManager.getPWMPort(1))
-        i2c1=GpioBordManager.getI2CPort()
+        i2c1 = GpioBordManager.getI2CPort()
         buttonGpio4 = pioService.openGpio(GpioBordManager.PIN_07_BCM4)
         buttonGpio17 = pioService.openGpio(GpioBordManager.PIN_11_BCM17)
         buttonGpio23 = pioService.openGpio(GpioBordManager.PIN_16_BCM23)
@@ -168,6 +172,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
 
     override fun onDestroy() {
+        mHttpServer?.stop()
         stopDistance()
         stop()
         pwmCenter()
@@ -206,8 +211,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
             if (distance > 30) {
                 forward()
-            }else
-            {
+            } else {
                 stop()
             }
         } else {
