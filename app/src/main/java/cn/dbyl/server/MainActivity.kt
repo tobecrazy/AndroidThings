@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
+import cn.dbyl.server.utils.GpioBordManager
 import com.google.android.things.pio.Gpio
 import com.google.android.things.pio.GpioCallback
 import com.google.android.things.pio.PeripheralManager
@@ -33,7 +34,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     lateinit var buttonGpio20: Gpio
     lateinit var buttonGpio26: Gpio
     lateinit var buttonGpio21: Gpio
-    lateinit var i2c1: String
+    var i2c1: String? = null
     var distance: Int = 11
 
 
@@ -91,19 +92,15 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun initial() {
         val pioService = PeripheralManager.getInstance()
-        var list = pioService.gpioList
-
-        pwm1 = pioService.openPwm("PWM1")
-        for (str in pioService.i2cBusList) {
-            i2c1 = str
-        }
-        buttonGpio4 = pioService.openGpio("BCM4")
-        buttonGpio17 = pioService.openGpio("BCM17")
-        buttonGpio23 = pioService.openGpio("BCM23")
-        buttonGpio24 = pioService.openGpio("BCM24")
-//        buttonGpio20 = pioService.openGpio("BCM20")
-//        buttonGpio21 = pioService.openGpio("BCM21")
-//        buttonGpio26 = pioService.openGpio("BCM26")
+        pwm1 = pioService.openPwm(GpioBordManager.getPWMPort(1))
+        i2c1=GpioBordManager.getI2CPort()
+        buttonGpio4 = pioService.openGpio(GpioBordManager.PIN_07_BCM4)
+        buttonGpio17 = pioService.openGpio(GpioBordManager.PIN_11_BCM17)
+        buttonGpio23 = pioService.openGpio(GpioBordManager.PIN_16_BCM23)
+        buttonGpio24 = pioService.openGpio(GpioBordManager.PIN_18_BCM24)
+//        buttonGpio20 = pioService.openGpio(GpioBordManager.PIN_38_BCM20)
+//        buttonGpio21 = pioService.openGpio(GpioBordManager.PIN_40_BCM21)
+//        buttonGpio26 = pioService.openGpio(GpioBordManager.PIN_37_BCM26)
         buttonGpio4.setDirection(Gpio.DIRECTION_OUT_INITIALLY_HIGH)
         buttonGpio17.setDirection(Gpio.DIRECTION_OUT_INITIALLY_HIGH)
         buttonGpio23.setDirection(Gpio.DIRECTION_OUT_INITIALLY_HIGH)
@@ -201,15 +198,22 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     override fun onSensorChanged(event: SensorEvent) {
-        distance = event.values[0].toInt()
-        Log.i(
-            "YoungTest", "=== $distance"
-        )
-        if (distance > 15) {
-            forward()
+        if (event.values[0].toInt() > 0) {
+            distance = event.values[0].toInt()
+            Log.i(
+                "YoungTest", "=== $distance"
+            )
+
+            if (distance > 30) {
+                forward()
+            }else
+            {
+                stop()
+            }
         } else {
             stop()
         }
+
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {

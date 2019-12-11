@@ -38,4 +38,6 @@ dependencies {
     implementation 'com.google.android.things.contrib:driver-button:1.0'
     //for HCSR-04
     implementation 'com.leinardi.android.things:driver-hcsr04:1.0'
+    //BMP 280
+    implementation 'com.google.android.things.contrib:driver-bmx280:1.0'
 }
