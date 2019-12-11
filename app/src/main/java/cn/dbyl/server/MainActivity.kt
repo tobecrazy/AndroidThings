@@ -1,44 +1,71 @@
 package cn.dbyl.server
 
-import androidx.appcompat.app.AppCompatActivity
+import android.content.Context
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.hardware.SensorManager.DynamicSensorCallback
 import android.os.Bundle
+import android.os.Handler
+import android.util.Log
+import androidx.appcompat.app.AppCompatActivity
 import com.google.android.things.pio.Gpio
 import com.google.android.things.pio.GpioCallback
 import com.google.android.things.pio.PeripheralManager
+import com.google.android.things.pio.Pwm
+import com.leinardi.android.things.driver.hcsr04.Hcsr04SensorDriver
+import java.io.IOException
+import java.util.*
 
 
 /**
- * 超声波模块的工作原理为，先向TRIG脚输入至少10us的触发信号,
- * 该模块内部将发出 8 个 40kHz 周期电平并检测回波。
- * 一旦检测到有回波信号则ECHO输出高电平回响信号。
- * 回响信号的脉冲宽度与所测的距离成正比。
- * 由此通过发射信号到收到的回响信号时间间隔可以计算得到距离。
- * 公式: 距离=高电平时间*声速(340M/S)/2。
- * <p>
- * <p>
- * VCC,超声波模块电源脚，接5V电源即可
- * Trig，超声波发送脚，高电平时发送出40KHZ出超声波
- * Echo，超声波接收检测脚，当接收到返回的超声波时，输出高电平
- * GND，超声波模块GND
  */
 /**
  * Skeleton of an Android Things activity.
  */
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), SensorEventListener {
     lateinit var buttonGpio4: Gpio
+    lateinit var pwm1: Pwm
     lateinit var buttonGpio17: Gpio
     lateinit var buttonGpio23: Gpio
     lateinit var buttonGpio24: Gpio
     lateinit var buttonGpio20: Gpio
     lateinit var buttonGpio26: Gpio
     lateinit var buttonGpio21: Gpio
+    lateinit var i2c1: String
+    var distance: Int = 11
+
+
+    private var mHandler: Handler? = null
+
+    private var mProximitySensorDriver: Hcsr04SensorDriver? = null
+    private var mSensorManager: SensorManager? = null
+
+    private val mDynamicSensorCallback: DynamicSensorCallback = object : DynamicSensorCallback() {
+        override fun onDynamicSensorConnected(sensor: Sensor) {
+            if (sensor.type == Sensor.TYPE_PROXIMITY) {
+                mSensorManager!!.registerListener(
+                    this@MainActivity,
+                    sensor, SensorManager.SENSOR_DELAY_NORMAL
+                )
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         initial()
-//        forward()
+        initialDistanceCheck("BCM20", "BCM26")
+
+//        pwmCenter()
+//
 //        Thread.sleep(5000)
+//        pwmControl(true)
+
+//        Thread.sleep(5000)
+//        pwmControl(false)
 //        backward()
 //        Thread.sleep(5000)
 //        left()
@@ -48,33 +75,49 @@ class MainActivity : AppCompatActivity() {
 //        stop()
 
 
-
     }
+
+    private fun initialDistanceCheck(trigPin: String, echoPin: String) {
+        mSensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        mSensorManager?.registerDynamicSensorCallback(mDynamicSensorCallback)
+
+        try {
+            mProximitySensorDriver = Hcsr04SensorDriver(trigPin, echoPin)
+            mProximitySensorDriver?.registerProximitySensor()
+        } catch (e: IOException) { // couldn't configure the device...
+        }
+    }
+
 
     private fun initial() {
         val pioService = PeripheralManager.getInstance()
         var list = pioService.gpioList
+
+        pwm1 = pioService.openPwm("PWM1")
+        for (str in pioService.i2cBusList) {
+            i2c1 = str
+        }
         buttonGpio4 = pioService.openGpio("BCM4")
         buttonGpio17 = pioService.openGpio("BCM17")
         buttonGpio23 = pioService.openGpio("BCM23")
         buttonGpio24 = pioService.openGpio("BCM24")
-        buttonGpio20 = pioService.openGpio("BCM20")
-        buttonGpio21 = pioService.openGpio("BCM21")
-        buttonGpio26= pioService.openGpio("BCM26")
+//        buttonGpio20 = pioService.openGpio("BCM20")
+//        buttonGpio21 = pioService.openGpio("BCM21")
+//        buttonGpio26 = pioService.openGpio("BCM26")
         buttonGpio4.setDirection(Gpio.DIRECTION_OUT_INITIALLY_HIGH)
         buttonGpio17.setDirection(Gpio.DIRECTION_OUT_INITIALLY_HIGH)
         buttonGpio23.setDirection(Gpio.DIRECTION_OUT_INITIALLY_HIGH)
         buttonGpio24.setDirection(Gpio.DIRECTION_OUT_INITIALLY_HIGH)
-        buttonGpio20.setDirection(Gpio.DIRECTION_OUT_INITIALLY_HIGH)
-        buttonGpio21.setDirection(Gpio.DIRECTION_IN)
-        buttonGpio21.setActiveType(Gpio.ACTIVE_HIGH)
-        buttonGpio21.setEdgeTriggerType(Gpio.EDGE_BOTH)
-        buttonGpio21.registerGpioCallback(mGpioCallback)
-
-        buttonGpio26.setDirection(Gpio.DIRECTION_IN)
-        buttonGpio26.setActiveType(Gpio.ACTIVE_HIGH)
-        buttonGpio26.setEdgeTriggerType(Gpio.EDGE_BOTH)
-        buttonGpio26.registerGpioCallback(mGpioCallback)
+//        buttonGpio20.setDirection(Gpio.DIRECTION_OUT_INITIALLY_HIGH)
+//        buttonGpio21.setDirection(Gpio.DIRECTION_IN)
+//        buttonGpio21.setActiveType(Gpio.ACTIVE_HIGH)
+//        buttonGpio21.setEdgeTriggerType(Gpio.EDGE_BOTH)
+//        buttonGpio21.registerGpioCallback(mGpioCallback)
+//
+//        buttonGpio26.setDirection(Gpio.DIRECTION_IN)
+//        buttonGpio26.setActiveType(Gpio.ACTIVE_HIGH)
+//        buttonGpio26.setEdgeTriggerType(Gpio.EDGE_BOTH)
+//        buttonGpio26.registerGpioCallback(mGpioCallback)
     }
 
     fun direction(a: Boolean, b: Boolean, c: Boolean, d: Boolean) {
@@ -105,14 +148,47 @@ class MainActivity : AppCompatActivity() {
         direction(false, false, false, false)
     }
 
+    fun pwmControl(isLeft: Boolean) {
+        var dutyCycle: Double = 0.0
+        if (isLeft) {
+            dutyCycle = 20.0
+        } else {
+            dutyCycle = 3.0
+        }
+        pwm1.setPwmDutyCycle(dutyCycle)
+        pwm1.setPwmFrequencyHz(60.0)
+        pwm1.setEnabled(true)
+    }
+
+
+    fun pwmCenter() {
+        pwm1.setPwmDutyCycle(50.0)
+        pwm1.setPwmFrequencyHz(50.0)
+        pwm1.setEnabled(true)
+        Thread.sleep(2000)
+        pwm1.setEnabled(false)
+    }
+
+
     override fun onDestroy() {
+        stopDistance()
         stop()
+        pwmCenter()
         super.onDestroy()
     }
 
-    fun getDistances()
-    {
-
+    private fun stopDistance() {
+        if (mProximitySensorDriver != null) {
+            mSensorManager!!.unregisterDynamicSensorCallback(mDynamicSensorCallback)
+            mSensorManager!!.unregisterListener(this)
+            mProximitySensorDriver!!.unregisterProximitySensor()
+            try {
+                mProximitySensorDriver!!.close()
+            } catch (e: IOException) { // error closing sensor
+            } finally {
+                mProximitySensorDriver = null
+            }
+        }
     }
 
     var mGpioCallback: GpioCallback = object : GpioCallback {
@@ -123,4 +199,21 @@ class MainActivity : AppCompatActivity() {
             return true
         }
     }
+
+    override fun onSensorChanged(event: SensorEvent) {
+        distance = event.values[0].toInt()
+        Log.i(
+            "YoungTest", "=== $distance"
+        )
+        if (distance > 15) {
+            forward()
+        } else {
+            stop()
+        }
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
+        Log.i("YoungTest", "sensor accuracy changed: $accuracy")
+    }
+
 }
