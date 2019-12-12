@@ -64,6 +64,15 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         initial()
         initialDistanceCheck("BCM20", "BCM26")
 
+        while (true) {
+            if (distance > 30) {
+                forward()
+            } else {
+                stop()
+            }
+        }
+
+
 //        pwmCenter()
 //
 //        Thread.sleep(5000)
@@ -203,21 +212,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     override fun onSensorChanged(event: SensorEvent) {
-        if (event.values[0].toInt() > 0) {
-            distance = event.values[0].toInt()
-            Log.i(
-                "YoungTest", "=== $distance"
-            )
-
-            if (distance > 30) {
-                forward()
-            } else {
-                stop()
-            }
-        } else {
-            stop()
-        }
-
+        distance = event.values[0].toInt()
+        Log.i(
+            "YoungTest", "=== $distance"
+        )
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
