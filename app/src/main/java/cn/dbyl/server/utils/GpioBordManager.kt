@@ -7,6 +7,9 @@ import android.os.Build
  * Create by i321533 (young.liu@sap.com) on 12/11/2019
  **/
 object GpioBordManager {
+
+    const val I2C_ADDRESS: Int = 0x20
+    //0x3f
     private const val DEVICE_IMX6UL_PICO = "imx6ul_pico"
     private const val DEVICE_IMX7D_PICO = "imx7d_pico"
     private var pwmNames: List<String> = listOf("PWM0", "PWM1")
