@@ -1,6 +1,7 @@
 package cn.dbyl.server
 
 import android.content.Context
+import android.content.Intent
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -14,12 +15,14 @@ import cn.dbyl.server.utils.GpioBordManager
 import cn.dbyl.server.utils.LcdPcf8574
 import cn.dbyl.server.utils.NetWorkUtils
 import cn.dbyl.server.web.AndroidWebServer
+import cn.dbyl.server.web.WebService
 import com.google.android.things.pio.Gpio
 import com.google.android.things.pio.PeripheralManager
 import com.google.android.things.pio.Pwm
 import com.leinardi.android.things.driver.hcsr04.Hcsr04SensorDriver
 import java.io.IOException
 import java.util.*
+
 
 /**
  * Skeleton of an Android Things activity.
@@ -36,6 +39,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
     lateinit var buttonGpio22: Gpio
     lateinit var buttonGpio23: Gpio
     lateinit var buttonGpio24: Gpio
+    lateinit var context: Context
 
 
     var i2c1: String? = null
@@ -63,6 +67,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        context = this
+        startWeb()
         startServer(8972)
         initialGpio()
         initialDistanceCheck(GpioBordManager.PIN_38_BCM20, GpioBordManager.PIN_37_BCM26)
@@ -93,8 +99,18 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
 //        pwmCenter()
     }
 
+    private fun startWeb() {
+        val intent = Intent(context, WebService::class.java)
+        startService(intent)
+    }
+
+    private fun stopWeb() {
+        val intent = Intent(context, WebService::class.java)
+        stopService(intent)
+    }
+
     private fun startServer(port: Int) {
-        mHttpServer = AndroidWebServer(NetWorkUtils.getLocalIpAddress(this), port,this)
+        mHttpServer = AndroidWebServer(NetWorkUtils.getLocalIpAddress(this), port, this)
         mHttpServer?.start()
     }
 
@@ -199,6 +215,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
         stopDistance()
         stop()
         pwmCenter()
+        stopWeb()
         super.onDestroy()
     }
 

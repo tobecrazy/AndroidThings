@@ -4,7 +4,7 @@ import android.os.Build
 
 
 /**
- * Create by i321533 (young.liu@sap.com) on 12/11/2019
+ * Create by Young on 12/11/2019
  **/
 object GpioBordManager {
 

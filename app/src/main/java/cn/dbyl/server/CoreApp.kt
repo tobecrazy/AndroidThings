@@ -13,11 +13,5 @@ class CoreApp : Application() {
         super.onCreate()
         val ip = NetWorkUtils.getLocalIpAddress(this)
         Log.d("IP", "Local Ip is ===>$ip")
-//        val thread: Thread = Thread(object : Runnable {
-//            override fun run() {
-//                SocketServer.ServerReceviedByTcp()
-//            }
-//        })
-//        thread.run()
     }
 }
