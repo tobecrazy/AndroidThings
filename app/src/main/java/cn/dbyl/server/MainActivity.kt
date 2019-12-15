@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
+import cn.dbyl.server.utils.Direction
 import cn.dbyl.server.utils.GpioBordManager
 import cn.dbyl.server.utils.NetWorkUtils
 import cn.dbyl.server.web.AndroidWebServer
@@ -253,13 +254,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
         val TAG = "CarSys"
     }
 
-    override fun onDirectionChanged(direction: String?) {
+    override fun onDirectionChanged(direction: Direction?) {
         when (direction) {
-            "Forward" -> forward()
-            "Backward" -> backward()
-            "Left" -> left()
-            "Right" -> right()
-            "Stop" -> stop()
+            Direction.Forward -> forward()
+            Direction.Backward -> backward()
+            Direction.Left -> left()
+            Direction.Right -> right()
+            Direction.Stop -> stop()
         }
     }
 
