@@ -1,7 +1,6 @@
 package cn.dbyl.server
 
 import android.content.Context
-import android.content.Intent
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -12,14 +11,14 @@ import android.os.Handler
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import cn.dbyl.server.utils.GpioBordManager
-import cn.dbyl.server.utils.LcdPcf8574
 import cn.dbyl.server.utils.NetWorkUtils
 import cn.dbyl.server.web.AndroidWebServer
-import cn.dbyl.server.web.WebService
 import com.google.android.things.pio.Gpio
 import com.google.android.things.pio.PeripheralManager
 import com.google.android.things.pio.Pwm
 import com.leinardi.android.things.driver.hcsr04.Hcsr04SensorDriver
+import nz.geek.android.things.driver.display.CharacterDisplay
+import nz.geek.android.things.driver.display.I2cLcdCharacterDisplay
 import java.io.IOException
 import java.util.*
 
@@ -40,7 +39,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
     lateinit var buttonGpio23: Gpio
     lateinit var buttonGpio24: Gpio
     lateinit var context: Context
-
+    // how many characters wide is your display?
+    private val LCD_WIDTH = 20
+    // How many characters high is your display?
+    private val LCD_HEIGHT = 4
 
     var i2c1: String? = null
     var distance: Int = 11
@@ -51,6 +53,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
     private var mProximitySensorDriver: Hcsr04SensorDriver? = null
     private var mSensorManager: SensorManager? = null
     private lateinit var listener: AndroidWebServer.OnDirectionChangeListener
+    private lateinit var lcd: CharacterDisplay
 
 
     private val mDynamicSensorCallback: DynamicSensorCallback = object : DynamicSensorCallback() {
@@ -68,46 +71,42 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         context = this
-        startWeb()
         startServer(8972)
+        intialLCD()
         initialGpio()
         initialDistanceCheck(GpioBordManager.PIN_38_BCM20, GpioBordManager.PIN_37_BCM26)
-//        while (true) {
-//            if (distance > 20) {
-//                forward()
-//            } else {
-//                stop()
-//            }
-//        }
-//        Thread.sleep(5000)
-//        right()
-//        Thread.sleep(5000)
-//        left()
-//        Thread.sleep(5000)
-//        backward()
-
-
-//        initialLcd()
-//        while (true) {
-//            if (distance > 30) {
-//                forward()
-//            } else {
-//            }
-//        }
-
-
 //        pwmCenter()
     }
 
-    private fun startWeb() {
-        val intent = Intent(context, WebService::class.java)
-        startService(intent)
+    private fun intialLCD() {
+        // create a display builder with the LCD module width and height
+        // create a display builder with the LCD module width and height
+        val builder =
+            I2cLcdCharacterDisplay.builder(LCD_WIDTH, LCD_HEIGHT)
+
+        builder.rs(0).rw(1).e(2).bl(3).data(4, 5, 6, 7).address(0)
+            .withBus(i2c1)
+
+        // build and use the display
+        lcd = builder.build()
+        lcd.connect()
+        lcd.enableBackLight(true)
+
+        // write message to the display, the first argument
+        // is the LCD line (row) number
+        lcd.print(1, "Android Things!")
+        lcd.print(2, "You're great.")
     }
 
-    private fun stopWeb() {
-        val intent = Intent(context, WebService::class.java)
-        stopService(intent)
-    }
+//    private fun startWeb() {
+//        val intent = Intent(context, WebService::class.java)
+//        startService(intent)
+//    }
+//
+//    private fun stopWeb() {
+//        val intent = Intent(context, WebService::class.java)
+//        stopService(intent)
+//    }
 
     private fun startServer(port: Int) {
         mHttpServer = AndroidWebServer(NetWorkUtils.getLocalIpAddress(this), port, this)
@@ -212,10 +211,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
 
     override fun onDestroy() {
         mHttpServer?.stop()
+        disableLCD()
         stopDistance()
         stop()
         pwmCenter()
-        stopWeb()
+//        stopWeb()
         super.onDestroy()
     }
 
@@ -249,29 +249,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
         Log.d(TAG, "sensor accuracy changed: $accuracy")
     }
 
-    fun initialLcd() {
-        val lcd =
-            LcdPcf8574(i2c1, GpioBordManager.I2C_ADDRESS)
-        lcd.begin(0, 2)
-        lcd.setBacklight(true)
-
-//      load custom character to the LCD
-        // load custom character to the LCD
-        val heart = intArrayOf(0, 10, 31, 31, 31, 14, 4, 0)
-        lcd.createChar(0, heart)
-
-        lcd.clear()
-        lcd.print("Hello,")
-        lcd.setCursor(0, 1)
-        lcd.print("Android Things!")
-        lcd.write(0) // write :heart: custom character
-
-
-        // Later on
-        // Later on
-        lcd.close()
-    }
-
     companion object {
         val TAG = "CarSys"
     }
@@ -284,5 +261,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
             "Right" -> right()
             "Stop" -> stop()
         }
+    }
+
+    fun disableLCD() {
+        // disconnect from the display to free resources
+        lcd.disconnect()
     }
 }
