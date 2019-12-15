@@ -39,7 +39,7 @@ dependencies {
     implementation 'org.nanohttpd:nanohttpd:2.3.1'
 
     //lcd
-    implementation 'nz.geek.android.things:things-driver-char-display:0.7'
+    implementation 'com.leinardi.android.things:driver-hd44780:1.0'
 
     //for HCSR-04
     implementation 'com.leinardi.android.things:driver-hcsr04:1.0'

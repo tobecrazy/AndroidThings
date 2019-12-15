@@ -8,6 +8,7 @@ import android.hardware.SensorManager
 import android.hardware.SensorManager.DynamicSensorCallback
 import android.os.Bundle
 import android.os.Handler
+import android.os.SystemClock
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import cn.dbyl.server.utils.Direction
@@ -18,14 +19,14 @@ import com.google.android.things.pio.Gpio
 import com.google.android.things.pio.PeripheralManager
 import com.google.android.things.pio.Pwm
 import com.leinardi.android.things.driver.hcsr04.Hcsr04SensorDriver
-import nz.geek.android.things.driver.display.CharacterDisplay
-import nz.geek.android.things.driver.display.I2cLcdCharacterDisplay
+import com.leinardi.android.things.driver.hd44780.Hd44780
 import java.io.IOException
 import java.util.*
 
 
 /**
  * Skeleton of an Android Things activity.
+ * 0x7e(PCF8574AT)   0x4e(PCF8574T)
  */
 class MainActivity : AppCompatActivity(), SensorEventListener,
     AndroidWebServer.OnDirectionChangeListener {
@@ -54,7 +55,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
     private var mProximitySensorDriver: Hcsr04SensorDriver? = null
     private var mSensorManager: SensorManager? = null
     private lateinit var listener: AndroidWebServer.OnDirectionChangeListener
-    private lateinit var lcd: CharacterDisplay
+    private val LCD_COLS = 20
+    private val LCD_ROWS = 4
+    private var mLcd: Hd44780? = null
 
 
     private val mDynamicSensorCallback: DynamicSensorCallback = object : DynamicSensorCallback() {
@@ -80,34 +83,21 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
     }
 
     private fun intialLCD() {
-        // create a display builder with the LCD module width and height
-        // create a display builder with the LCD module width and height
-        val builder =
-            I2cLcdCharacterDisplay.builder(LCD_WIDTH, LCD_HEIGHT)
-
-        builder.rs(0).rw(1).e(2).bl(3).data(4, 5, 6, 7).address(0)
-            .withBus(i2c1)
-
-        // build and use the display
-        lcd = builder.build()
-        lcd.connect()
-        lcd.enableBackLight(true)
-
-        // write message to the display, the first argument
-        // is the LCD line (row) number
-        lcd.print(1, "Android Things!")
-        lcd.print(2, "You're great.")
+        mLcd = try {
+            Hd44780(
+                i2c1,
+                Hd44780.I2cAddress.PCF8574T,
+                Hd44780.Geometry.LCD_16X2
+            )
+        } catch (e: IOException) {
+            Log.e(TAG, "Error while opening LCD", e)
+            throw RuntimeException(e)
+        }
+        Log.d(TAG, "LCD activity created")
+        showText()
     }
 
-//    private fun startWeb() {
-//        val intent = Intent(context, WebService::class.java)
-//        startService(intent)
-//    }
-//
-//    private fun stopWeb() {
-//        val intent = Intent(context, WebService::class.java)
-//        stopService(intent)
-//    }
+
 
     private fun startServer(port: Int) {
         mHttpServer = AndroidWebServer(NetWorkUtils.getLocalIpAddress(this), port, this)
@@ -266,6 +256,79 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
 
     fun disableLCD() {
         // disconnect from the display to free resources
-        lcd.disconnect()
+        try {
+            mLcd!!.close()
+        } catch (e: IOException) {
+            Log.e(TAG, "Error closing Hd44780", e)
+        } finally {
+            mLcd = null
+        }
+    }
+
+    private fun showText() {
+        Thread(Runnable {
+            try {
+                while (true) {
+                    mLcd!!.setBacklight(true)
+                    mLcd!!.cursorHome()
+                    mLcd!!.clearDisplay()
+                    mLcd!!.setText("Hello LCD")
+                    val heart = intArrayOf(0, 10, 31, 31, 31, 14, 4, 0)
+                    mLcd!!.createCustomChar(heart, 0)
+                    mLcd!!.setCursor(10, 0)
+                    mLcd!!.writeCustomChar(0) // write :heart: custom character previously stored in location 0
+                    delay(2)
+                    mLcd!!.clearDisplay()
+                    mLcd!!.setText("Backlight Off")
+                    mLcd!!.setBacklight(false)
+                    delay(2)
+                    mLcd!!.clearDisplay()
+                    mLcd!!.setText("Backlight On")
+                    mLcd!!.setBacklight(true)
+                    delay(2)
+                    mLcd!!.clearDisplay()
+                    mLcd!!.setText("Cursor On")
+                    mLcd!!.setCursorOn(true)
+                    delay(2)
+                    mLcd!!.clearDisplay()
+                    mLcd!!.setText("Cursor Blink")
+                    mLcd!!.setBlinkOn(true)
+                    delay(2)
+                    mLcd!!.clearDisplay()
+                    mLcd!!.setText("Cursor OFF")
+                    mLcd!!.setBlinkOn(false)
+                    mLcd!!.setCursorOn(false)
+                    delay(2)
+                    mLcd!!.clearDisplay()
+                    mLcd!!.setText("Display Off")
+                    mLcd!!.setDisplayOn(false)
+                    delay(2)
+                    mLcd!!.clearDisplay()
+                    mLcd!!.setText("Display On")
+                    mLcd!!.setDisplayOn(true)
+                    delay(2)
+                    mLcd!!.clearDisplay()
+                    for (i in 0 until LCD_ROWS) {
+                        mLcd!!.setCursor(0, i)
+                        mLcd!!.setText("-+* line $i *+-")
+                    }
+                    delay(2)
+                    mLcd!!.scrollDisplayLeft()
+                    delay(2)
+                    mLcd!!.scrollDisplayLeft()
+                    delay(2)
+                    mLcd!!.scrollDisplayLeft()
+                    delay(2)
+                    mLcd!!.scrollDisplayRight()
+                    delay(2)
+                }
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+        }).start()
+    }
+
+    private fun delay(s: Long) {
+        SystemClock.sleep(s * 1000)
     }
 }
