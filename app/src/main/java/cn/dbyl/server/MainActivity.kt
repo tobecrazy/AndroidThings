@@ -76,8 +76,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
         setContentView(R.layout.activity_main)
         context = this
         startServer(8972)
-        intialLCD()
         initialGpio()
+        intialLCD()
         initialDistanceCheck(GpioBordManager.PIN_38_BCM20, GpioBordManager.PIN_37_BCM26)
 //        pwmCenter()
     }
