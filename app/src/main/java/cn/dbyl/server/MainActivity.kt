@@ -41,11 +41,15 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
     lateinit var buttonGpio23: Gpio
     lateinit var buttonGpio24: Gpio
     lateinit var context: Context
-    // how many characters wide is your display?
-    private val LCD_WIDTH = 20
-    // How many characters high is your display?
-    private val LCD_HEIGHT = 4
+    var callback: ServiceCallBack = object : ServiceCallBack {
+        override fun onBindingService() {
 
+        }
+
+        override fun onUnBindingService() {
+
+        }
+    }
     var i2c1: String? = null
     var distance: Int = 11
 
@@ -55,8 +59,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
     private var mProximitySensorDriver: Hcsr04SensorDriver? = null
     private var mSensorManager: SensorManager? = null
     private lateinit var listener: AndroidWebServer.OnDirectionChangeListener
-    private val LCD_COLS = 20
-    private val LCD_ROWS = 4
     private var mLcd: Hd44780? = null
 
 
@@ -78,7 +80,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
         startServer(8972)
         initialGpio()
         intialLCD()
+        showText("Start")
         initialDistanceCheck(GpioBordManager.PIN_38_BCM20, GpioBordManager.PIN_37_BCM26)
+
 //        pwmCenter()
     }
 
@@ -87,16 +91,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
             Hd44780(
                 i2c1,
                 Hd44780.I2cAddress.PCF8574T,
-                Hd44780.Geometry.LCD_16X2
+                Hd44780.Geometry.LCD_8X1, false
             )
         } catch (e: IOException) {
             Log.e(TAG, "Error while opening LCD", e)
             throw RuntimeException(e)
         }
         Log.d(TAG, "LCD activity created")
-        showText()
     }
-
 
 
     private fun startServer(port: Int) {
@@ -246,11 +248,27 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
 
     override fun onDirectionChanged(direction: Direction?) {
         when (direction) {
-            Direction.Forward -> forward()
-            Direction.Backward -> backward()
-            Direction.Left -> left()
-            Direction.Right -> right()
-            Direction.Stop -> stop()
+            Direction.Forward -> {
+                showText(Direction.Forward.toString())
+                forward()
+            }
+            Direction.Backward -> {
+                showText("Back")
+                backward()
+            }
+            Direction.Left -> {
+                showText(Direction.Left.toString())
+                left()
+            }
+            Direction.Right -> {
+                showText(Direction.Right.toString())
+                right()
+            }
+            Direction.Stop -> {
+                showText(Direction.Stop.toString())
+                stop()
+            }
+
         }
     }
 
@@ -265,70 +283,26 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
         }
     }
 
-    private fun showText() {
-        Thread(Runnable {
-            try {
-                while (true) {
-                    mLcd!!.setBacklight(true)
-                    mLcd!!.cursorHome()
-                    mLcd!!.clearDisplay()
-                    mLcd!!.setText("Hello LCD")
-                    val heart = intArrayOf(0, 10, 31, 31, 31, 14, 4, 0)
-                    mLcd!!.createCustomChar(heart, 0)
-                    mLcd!!.setCursor(10, 0)
-                    mLcd!!.writeCustomChar(0) // write :heart: custom character previously stored in location 0
-                    delay(2)
-                    mLcd!!.clearDisplay()
-                    mLcd!!.setText("Backlight Off")
-                    mLcd!!.setBacklight(false)
-                    delay(2)
-                    mLcd!!.clearDisplay()
-                    mLcd!!.setText("Backlight On")
-                    mLcd!!.setBacklight(true)
-                    delay(2)
-                    mLcd!!.clearDisplay()
-                    mLcd!!.setText("Cursor On")
-                    mLcd!!.setCursorOn(true)
-                    delay(2)
-                    mLcd!!.clearDisplay()
-                    mLcd!!.setText("Cursor Blink")
-                    mLcd!!.setBlinkOn(true)
-                    delay(2)
-                    mLcd!!.clearDisplay()
-                    mLcd!!.setText("Cursor OFF")
-                    mLcd!!.setBlinkOn(false)
-                    mLcd!!.setCursorOn(false)
-                    delay(2)
-                    mLcd!!.clearDisplay()
-                    mLcd!!.setText("Display Off")
-                    mLcd!!.setDisplayOn(false)
-                    delay(2)
-                    mLcd!!.clearDisplay()
-                    mLcd!!.setText("Display On")
-                    mLcd!!.setDisplayOn(true)
-                    delay(2)
-                    mLcd!!.clearDisplay()
-                    for (i in 0 until LCD_ROWS) {
-                        mLcd!!.setCursor(0, i)
-                        mLcd!!.setText("-+* line $i *+-")
-                    }
-                    delay(2)
-                    mLcd!!.scrollDisplayLeft()
-                    delay(2)
-                    mLcd!!.scrollDisplayLeft()
-                    delay(2)
-                    mLcd!!.scrollDisplayLeft()
-                    delay(2)
-                    mLcd!!.scrollDisplayRight()
-                    delay(2)
-                }
-            } catch (e: IOException) {
-                e.printStackTrace()
-            }
-        }).start()
+    private fun showText(text: String, second: Long = 3) {
+        if (null != mLcd) {
+            mLcd!!.setBacklight(true)
+            mLcd!!.cursorHome()
+            mLcd!!.setBlinkOn(true)
+            mLcd!!.clearDisplay()
+//            mLcd!!.setCursorOn(true)
+            mLcd!!.setDisplayOn(true)
+            mLcd!!.scrollDisplayRight()
+            mLcd!!.setText(text)
+            delay(second)
+        }
     }
 
-    private fun delay(s: Long) {
-        SystemClock.sleep(s * 1000)
+    private fun delay(second: Long) {
+        SystemClock.sleep(second * 1000)
+    }
+
+    interface ServiceCallBack {
+        fun onBindingService()
+        fun onUnBindingService()
     }
 }
