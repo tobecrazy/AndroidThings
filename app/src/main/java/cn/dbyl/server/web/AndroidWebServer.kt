@@ -22,11 +22,24 @@ class AndroidWebServer(hostname: String?, port: Int, var listener: OnDirectionCh
             } else {
                 badResponse()
             }
-        } else {
+        }else if (session?.method?.equals(Method.POST) == true)
+        {
+            val parameters = session.parameters
+            if (parameters[Constant.DIRECTION] != null && parameters.isNotEmpty()) {
+                setDirection(parameters[Constant.DIRECTION]!![0])
+                postResponse()
+            } else {
+                badResponse()
+            }
+        }
+        else {
             response404()
         }
     }
 
+    fun postResponse():Response{
+        return newFixedLengthResponse(Response.Status.NOT_FOUND, MIME_PLAINTEXT, "{\"status\":\"success\"}")
+    }
     private fun successResponse(): Response {
         val sb = StringBuilder()
         sb.append("<!DOCTYPE html>")

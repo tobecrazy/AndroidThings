@@ -79,8 +79,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
         context = this
         startServer(8972)
         initialGpio()
-        intialLCD()
-        showText("Start")
+//        intialLCD()
+//        showText("Start")
         initialDistanceCheck(GpioBordManager.PIN_38_BCM20, GpioBordManager.PIN_37_BCM26)
 
 //        pwmCenter()
@@ -204,7 +204,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
 
     override fun onDestroy() {
         mHttpServer?.stop()
-        disableLCD()
+//        disableLCD()
         stopDistance()
         stop()
         pwmCenter()
@@ -249,19 +249,19 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
     override fun onDirectionChanged(direction: Direction?) {
         when (direction) {
             Direction.Forward -> {
-                showText(Direction.Forward.toString())
+//                showText(Direction.Forward.toString())
                 forward()
             }
             Direction.Backward -> {
-                showText("Back")
+//                showText("Back")
                 backward()
             }
             Direction.Left -> {
-                showText(Direction.Left.toString())
+//                showText(Direction.Left.toString())
                 left()
             }
             Direction.Right -> {
-                showText(Direction.Right.toString())
+//                showText(Direction.Right.toString())
                 right()
             }
             Direction.Stop -> {
