@@ -6,5 +6,7 @@ package cn.dbyl.server.data
 class Constant {
     companion object{
         val DIRECTION="direction"
+        val SUCCESS="success"
+        val ALIVE="alive"
     }
 }

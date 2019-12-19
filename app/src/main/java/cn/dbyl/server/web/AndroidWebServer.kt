@@ -17,29 +17,39 @@ class AndroidWebServer(hostname: String?, port: Int, var listener: OnDirectionCh
         return if (session?.method?.equals(Method.GET) == true) {
             val parameters = session.parameters
             if (parameters[Constant.DIRECTION] != null && parameters.isNotEmpty()) {
-                setDirection(parameters[Constant.DIRECTION]!![0])
-                successResponse()
+                if (setDirection(parameters[Constant.DIRECTION]!![0])) {
+                    responseWithStatus(Constant.SUCCESS)
+                } else {
+                    responseWithStatus(Constant.ALIVE)
+                }
+
             } else {
                 badResponse()
             }
-        }else if (session?.method?.equals(Method.POST) == true)
-        {
+        } else if (session?.method?.equals(Method.POST) == true) {
             val parameters = session.parameters
             if (parameters[Constant.DIRECTION] != null && parameters.isNotEmpty()) {
-                setDirection(parameters[Constant.DIRECTION]!![0])
-                postResponse()
+                if (setDirection(parameters[Constant.DIRECTION]!![0])) {
+                    responseWithStatus(Constant.SUCCESS)
+                } else {
+                    responseWithStatus(Constant.ALIVE)
+                }
             } else {
                 badResponse()
             }
-        }
-        else {
+        } else {
             response404()
         }
     }
 
-    fun postResponse():Response{
-        return newFixedLengthResponse(Response.Status.NOT_FOUND, MIME_PLAINTEXT, "{\"status\":\"success\"}")
+    fun responseWithStatus(status: String): Response {
+        return newFixedLengthResponse(
+            Response.Status.OK,
+            MIME_PLAINTEXT,
+            "{\"status\":\"$status\"}"
+        )
     }
+
     private fun successResponse(): Response {
         val sb = StringBuilder()
         sb.append("<!DOCTYPE html>")
@@ -121,14 +131,31 @@ class AndroidWebServer(hostname: String?, port: Int, var listener: OnDirectionCh
         fun onOpenCamera(cameraIndex: Int?)
     }
 
-    fun setDirection(direction: String) {
+    fun setDirection(direction: String): Boolean {
+        var status: Boolean
         when (direction) {
-            Direction.Forward.toString() -> listener.onDirectionChanged(Direction.Forward)
-            Direction.Backward.toString() -> listener.onDirectionChanged(Direction.Backward)
-            Direction.Left.toString() -> listener.onDirectionChanged(Direction.Left)
-            Direction.Right.toString() -> listener.onDirectionChanged(Direction.Right)
-            Direction.Stop.toString() -> listener.onDirectionChanged(Direction.Stop)
+            Direction.Forward.toString() -> {
+                status = true
+                listener.onDirectionChanged(Direction.Forward)
+            }
+            Direction.Backward.toString() -> {
+                status = true
+                listener.onDirectionChanged(Direction.Backward)
+            }
+            Direction.Left.toString() -> {
+                status = true
+                listener.onDirectionChanged(Direction.Left)
+            }
+            Direction.Right.toString() -> {
+                status = true
+                listener.onDirectionChanged(Direction.Right)
+            }
+            Direction.Stop.toString() -> {
+                status = true
+                listener.onDirectionChanged(Direction.Stop)
+            }
+            else -> status = false
         }
+        return status
     }
-
 }

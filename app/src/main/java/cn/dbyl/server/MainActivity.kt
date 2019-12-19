@@ -18,6 +18,7 @@ import cn.dbyl.server.web.AndroidWebServer
 import com.google.android.things.pio.Gpio
 import com.google.android.things.pio.PeripheralManager
 import com.google.android.things.pio.Pwm
+import com.leinardi.android.things.driver.hcsr04.Hcsr04
 import com.leinardi.android.things.driver.hcsr04.Hcsr04SensorDriver
 import com.leinardi.android.things.driver.hd44780.Hd44780
 import java.io.IOException
@@ -41,6 +42,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
     lateinit var buttonGpio23: Gpio
     lateinit var buttonGpio24: Gpio
     lateinit var context: Context
+    lateinit var hcsr04:Hcsr04
     var callback: ServiceCallBack = object : ServiceCallBack {
         override fun onBindingService() {
 
@@ -79,11 +81,19 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
         context = this
         startServer(8972)
         initialGpio()
+        initalHCSR04()
 //        intialLCD()
 //        showText("Start")
-        initialDistanceCheck(GpioBordManager.PIN_38_BCM20, GpioBordManager.PIN_37_BCM26)
+//        initialDistanceCheck(GpioBordManager.PIN_38_BCM20, GpioBordManager.PIN_37_BCM26)
 
 //        pwmCenter()
+    }
+
+    private fun initalHCSR04() {
+        try {
+            hcsr04 = Hcsr04( GpioBordManager.PIN_37_BCM26,GpioBordManager.PIN_38_BCM20)
+        } catch (e: IOException) { // couldn't configure the device...
+        }
     }
 
     private fun intialLCD() {
