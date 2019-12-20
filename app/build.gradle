@@ -46,7 +46,7 @@ dependencies {
 
 //oled
     implementation 'com.leinardi.android.things:driver-sh1106:1.0'
-    implementation 'com.google.android.things.contrib:driver-ssd1306:1.1'
+//    implementation 'com.google.android.things.contrib:driver-ssd1306:1.1'
 //pwm
     implementation 'com.google.android.things.contrib:driver-pwmservo:1.0'
 
