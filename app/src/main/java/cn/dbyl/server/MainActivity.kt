@@ -64,7 +64,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
     var distance: Int = 11
 
     private var mHttpServer: AndroidWebServer? = null
-    private var mHandler: Handler? = null
+    private var mHandler: Handler = Handler()
     private var mProximitySensorDriver: Hcsr04SensorDriver? = null
     private var mSensorManager: SensorManager? = null
     private lateinit var listener: AndroidWebServer.OnDirectionChangeListener
@@ -115,10 +115,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
             Sh1106(GpioBordManager.getI2CPort())
         } catch (e: IOException) {
             Log.e(TAG, "Error while opening screen", e)
-            throw java.lang.RuntimeException(e)
+            throw RuntimeException(e)
         }
         Log.d(TAG, "OLED screen activity created")
-        mHandler!!.post(mDrawRunnable)
+        mHandler.post(mDrawRunnable)
     }
 
     private fun initalHCSR04() {
@@ -245,7 +245,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
 
     fun disableOled() {
         // remove pending runnable from the handler
-        mHandler?.removeCallbacks(mDrawRunnable)
+        mHandler.removeCallbacks(mDrawRunnable)
         // Close the device.
         try {
             mScreen?.close()
@@ -367,6 +367,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
             if (mScreen == null) {
                 return
             }
+            mScreen?.clearPixels()
             mTick++
             try {
                 when (mMode) {
@@ -379,10 +380,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
                         drawCrosshairs()
 
                 }
-                mScreen?.show();
-                mHandler?.postDelayed(this, 1000L / FPS)
+                mScreen?.show()
+                mHandler.postDelayed(this, 1000L / FPS)
             } catch (e: IOException) {
-                Log.e(TAG, "Exception during screen update", e);
+                Log.e(TAG, "Exception during screen update", e)
             }
         }
 
@@ -442,11 +443,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
 
     private fun drawMovingBitmap() {
         if (mBitmap == null) {
-            mBitmap = BitmapFactory.decodeResource(resources, R.drawable.logo)
+            mBitmap = BitmapFactory.decodeResource(resources, R.drawable.android)
         }
         // Move the bmp every few ticks
         if (mTick % BITMAP_FRAMES_PER_MOVE == 0) {
-            mScreen?.clearPixels();
+            mScreen?.clearPixels()
             // Move the bitmap back and forth based on mBitmapMod:
             // 0 - left aligned
             // 1 - centered
@@ -455,7 +456,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
             val diff: Int = mScreen?.lcdWidth?.minus(mBitmap?.width!!) ?: 0
             val mult = if (mBitmapMod == 3) 1 else mBitmapMod// 0, 1, or 2
             val offset = mult * (diff / 2)
-            BitmapHelper.setBmpData(mScreen, offset, 0, mBitmap, false)
+            BitmapHelper.setBmpData(mScreen, offset, 0, mBitmap, true)
             mBitmapMod = (mBitmapMod + 1) % 4
         }
     }
