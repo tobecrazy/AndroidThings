@@ -101,8 +101,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
         context = this
         startServer(8972)
         initialGpio()
-        initialOled()
-        initalHCSR04()
+        stop()
+        Log.d(
+            TAG,
+            "initial system ===> ${buttonGpio27.value} === ${buttonGpio22.value} === ${buttonGpio23.value} ===${buttonGpio24.value}"
+        )
+//        initialOled()
+//        initalHCSR04()
 //        intialLCD()
 //        showText("Start")
 //        initialDistanceCheck(GpioBordManager.PIN_38_BCM20, GpioBordManager.PIN_37_BCM26)
@@ -172,20 +177,22 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
         pwm0 = pioService.openPwm(GpioBordManager.getPWMPort(0))
         pwm1 = pioService.openPwm(GpioBordManager.getPWMPort(1))
         i2c1 = GpioBordManager.getI2CPort()
-        buttonGpio4 = pioService.openGpio(GpioBordManager.PIN_07_BCM4)
-        buttonGpio17 = pioService.openGpio(GpioBordManager.PIN_11_BCM17)
+//        buttonGpio4 = pioService.openGpio(GpioBordManager.PIN_07_BCM4)
+//        buttonGpio17 = pioService.openGpio(GpioBordManager.PIN_11_BCM17)
         //left
         buttonGpio27 = pioService.openGpio(GpioBordManager.PIN_13_BCM27)
         buttonGpio22 = pioService.openGpio(GpioBordManager.PIN_15_BCM22)
+
         //right
         buttonGpio23 = pioService.openGpio(GpioBordManager.PIN_16_BCM23)
         buttonGpio24 = pioService.openGpio(GpioBordManager.PIN_18_BCM24)
+
         //for distance check
 //        buttonGpio21 = pioService.openGpio(GpioBordManager.PIN_40_BCM21)
 //        buttonGpio26 = pioService.openGpio(GpioBordManager.PIN_37_BCM26)
 
-        buttonGpio4.setDirection(Gpio.DIRECTION_OUT_INITIALLY_HIGH)
-        buttonGpio17.setDirection(Gpio.DIRECTION_OUT_INITIALLY_HIGH)
+//        buttonGpio4.setDirection(Gpio.DIRECTION_OUT_INITIALLY_HIGH)
+//        buttonGpio17.setDirection(Gpio.DIRECTION_OUT_INITIALLY_HIGH)
         //for driver
         buttonGpio22.setDirection(Gpio.DIRECTION_OUT_INITIALLY_HIGH)
         buttonGpio27.setDirection(Gpio.DIRECTION_OUT_INITIALLY_HIGH)
@@ -198,26 +205,50 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
         buttonGpio22.value = b
         buttonGpio23.value = c
         buttonGpio24.value = d
+        Log.d(
+            TAG,
+            " ===> ${buttonGpio27.value} === ${buttonGpio22.value} === ${buttonGpio23.value} ===${buttonGpio24.value}"
+        )
     }
 
     fun forward() {
+        Log.d(
+            TAG,
+            "forward() ===> "
+        )
         direction(true, false, true, false)
     }
 
 
     fun backward() {
+        Log.d(
+            TAG,
+            "backward() ===>"
+        )
         direction(false, true, false, true)
     }
 
     fun left() {
+        Log.d(
+            TAG,
+            "Left() ===> "
+        )
         direction(true, false, false, false)
     }
 
     fun right() {
+        Log.d(
+            TAG,
+            "Right() ===>"
+        )
         direction(false, false, true, false)
     }
 
     fun stop() {
+        Log.d(
+            TAG,
+            "stop() ===>"
+        )
         direction(false, false, false, false)
     }
 
@@ -259,7 +290,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
     override fun onDestroy() {
         mHttpServer?.stop()
 //        disableLCD()
-        disableOled()
+//        disableOled()
         stopDistance()
         stop()
         pwmCenter()
