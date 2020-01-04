@@ -1,6 +1,8 @@
 package cn.dbyl.server.web
 
 import android.util.Log
+import cn.dbyl.server.data.Constant
+import cn.dbyl.server.utils.Direction
 import fi.iki.elonen.NanoHTTPD
 import java.lang.StringBuilder
 
@@ -9,18 +11,43 @@ import java.lang.StringBuilder
  * Create by Young on 12/11/2019
  **/
 class AndroidWebServer(hostname: String?, port: Int, var listener: OnDirectionChangeListener) :
+
     NanoHTTPD(hostname, port) {
     override fun serve(session: IHTTPSession?): Response {
         return if (session?.method?.equals(Method.GET) == true) {
-            Log.d("YoungTest", "===>Get")
             val parameters = session.parameters
-            if (parameters["direction"] != null && parameters.isNotEmpty()) {
-                listener.onDirectionChanged(parameters["direction"]!![0])
+            if (parameters[Constant.DIRECTION] != null && parameters.isNotEmpty()) {
+                if (setDirection(parameters[Constant.DIRECTION]!![0])) {
+                    responseWithStatus(Constant.SUCCESS)
+                } else {
+                    responseWithStatus(Constant.ALIVE)
+                }
+
+            } else {
+                badResponse()
             }
-            successResponse()
+        } else if (session?.method?.equals(Method.POST) == true) {
+            val parameters = session.parameters
+            if (parameters[Constant.DIRECTION] != null && parameters.isNotEmpty()) {
+                if (setDirection(parameters[Constant.DIRECTION]!![0])) {
+                    responseWithStatus(Constant.SUCCESS)
+                } else {
+                    responseWithStatus(Constant.ALIVE)
+                }
+            } else {
+                badResponse()
+            }
         } else {
             response404()
         }
+    }
+
+    fun responseWithStatus(status: String): Response {
+        return newFixedLengthResponse(
+            Response.Status.OK,
+            MIME_PLAINTEXT,
+            "{\"status\":\"$status\"}"
+        )
     }
 
     private fun successResponse(): Response {
@@ -84,16 +111,51 @@ class AndroidWebServer(hostname: String?, port: Int, var listener: OnDirectionCh
         sb.appendln("<h1>We are sorry, the page you requested cannot be found.</h1>")
         sb.appendln("<h3>The URL may be misspelled or the page you're looking for is no longer available!</h3>")
         sb.appendln("</body></html>")
-        return newFixedLengthResponse(Response.Status.BAD_REQUEST, MIME_HTML, sb.toString())
+        return newFixedLengthResponse(Response.Status.NOT_FOUND, MIME_HTML, sb.toString())
 
     }
 
+    fun badResponse(): Response {
+        val sb = StringBuilder()
+        sb.appendln("<html><body>")
+        sb.appendln("<h1>Bad Request!,Please check your request URL.</h1>")
+        sb.appendln("</body></html>")
+        return newFixedLengthResponse(Response.Status.BAD_REQUEST, MIME_HTML, sb.toString())
+    }
+
     interface OnDirectionChangeListener {
-        fun onDirectionChanged(direction: String?)
+        fun onDirectionChanged(direction: Direction?)
     }
 
     interface OnOpenCamera {
         fun onOpenCamera(cameraIndex: Int?)
     }
 
+    fun setDirection(direction: String): Boolean {
+        var status: Boolean
+        when (direction) {
+            Direction.Forward.toString() -> {
+                status = true
+                listener.onDirectionChanged(Direction.Forward)
+            }
+            Direction.Backward.toString() -> {
+                status = true
+                listener.onDirectionChanged(Direction.Backward)
+            }
+            Direction.Left.toString() -> {
+                status = true
+                listener.onDirectionChanged(Direction.Left)
+            }
+            Direction.Right.toString() -> {
+                status = true
+                listener.onDirectionChanged(Direction.Right)
+            }
+            Direction.Stop.toString() -> {
+                status = true
+                listener.onDirectionChanged(Direction.Stop)
+            }
+            else -> status = false
+        }
+        return status
+    }
 }

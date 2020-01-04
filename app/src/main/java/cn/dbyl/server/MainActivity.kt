@@ -1,6 +1,8 @@
 package cn.dbyl.server
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -8,17 +10,21 @@ import android.hardware.SensorManager
 import android.hardware.SensorManager.DynamicSensorCallback
 import android.os.Bundle
 import android.os.Handler
+import android.os.SystemClock
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
+import cn.dbyl.server.utils.Direction
 import cn.dbyl.server.utils.GpioBordManager
 import cn.dbyl.server.utils.NetWorkUtils
 import cn.dbyl.server.web.AndroidWebServer
 import com.google.android.things.pio.Gpio
 import com.google.android.things.pio.PeripheralManager
 import com.google.android.things.pio.Pwm
+import com.leinardi.android.things.driver.hcsr04.Hcsr04
 import com.leinardi.android.things.driver.hcsr04.Hcsr04SensorDriver
-import nz.geek.android.things.driver.display.CharacterDisplay
-import nz.geek.android.things.driver.display.I2cLcdCharacterDisplay
+import com.leinardi.android.things.driver.hd44780.Hd44780
+import com.leinardi.android.things.driver.sh1106.BitmapHelper
+import com.leinardi.android.things.driver.sh1106.Sh1106
 import java.io.IOException
 import java.util.*
 
@@ -39,22 +45,44 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
     lateinit var buttonGpio23: Gpio
     lateinit var buttonGpio24: Gpio
     lateinit var context: Context
-    // how many characters wide is your display?
-    private val LCD_WIDTH = 20
-    // How many characters high is your display?
-    private val LCD_HEIGHT = 4
+    lateinit var hcsr04: Hcsr04
+
+    private val FPS = 30 // Frames per second on draw thread
+
+    private val BITMAP_FRAMES_PER_MOVE = 4 // Frames to show bitmap before moving it
+
+
+    private var mExpandingPixels = true
+    private var mDotMod = 1
+    private var mBitmapMod = 0
+    private var mTick = 0
+    private val mMode = Modes.BITMAP
+    private var mScreen: Sh1106? = null
+    private var mBitmap: Bitmap? = null
 
     var i2c1: String? = null
     var distance: Int = 11
 
     private var mHttpServer: AndroidWebServer? = null
-    private var mHandler: Handler? = null
-
+    private var mHandler: Handler = Handler()
     private var mProximitySensorDriver: Hcsr04SensorDriver? = null
     private var mSensorManager: SensorManager? = null
     private lateinit var listener: AndroidWebServer.OnDirectionChangeListener
-    private lateinit var lcd: CharacterDisplay
+    private var mLcd: Hd44780? = null
 
+    internal enum class Modes {
+        CROSSHAIRS, DOTS, BITMAP
+    }
+
+    var callback: ServiceCallBack = object : ServiceCallBack {
+        override fun onBindingService() {
+
+        }
+
+        override fun onUnBindingService() {
+
+        }
+    }
 
     private val mDynamicSensorCallback: DynamicSensorCallback = object : DynamicSensorCallback() {
         override fun onDynamicSensorConnected(sensor: Sensor) {
@@ -72,41 +100,53 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
         setContentView(R.layout.activity_main)
         context = this
         startServer(8972)
-        intialLCD()
         initialGpio()
-        initialDistanceCheck(GpioBordManager.PIN_38_BCM20, GpioBordManager.PIN_37_BCM26)
+        stop()
+        Log.d(
+            TAG,
+            "initial system ===> ${buttonGpio27.value} === ${buttonGpio22.value} === ${buttonGpio23.value} ===${buttonGpio24.value}"
+        )
+//        initialOled()
+//        initalHCSR04()
+//        intialLCD()
+//        showText("Start")
+//        initialDistanceCheck(GpioBordManager.PIN_38_BCM20, GpioBordManager.PIN_37_BCM26)
+
 //        pwmCenter()
     }
 
-    private fun intialLCD() {
-        // create a display builder with the LCD module width and height
-        // create a display builder with the LCD module width and height
-        val builder =
-            I2cLcdCharacterDisplay.builder(LCD_WIDTH, LCD_HEIGHT)
-
-        builder.rs(0).rw(1).e(2).bl(3).data(4, 5, 6, 7).address(0)
-            .withBus(i2c1)
-
-        // build and use the display
-        lcd = builder.build()
-        lcd.connect()
-        lcd.enableBackLight(true)
-
-        // write message to the display, the first argument
-        // is the LCD line (row) number
-        lcd.print(1, "Android Things!")
-        lcd.print(2, "You're great.")
+    private fun initialOled() {
+        mScreen = try {
+            Sh1106(GpioBordManager.getI2CPort())
+        } catch (e: IOException) {
+            Log.e(TAG, "Error while opening screen", e)
+            throw RuntimeException(e)
+        }
+        Log.d(TAG, "OLED screen activity created")
+        mHandler.post(mDrawRunnable)
     }
 
-//    private fun startWeb() {
-//        val intent = Intent(context, WebService::class.java)
-//        startService(intent)
-//    }
-//
-//    private fun stopWeb() {
-//        val intent = Intent(context, WebService::class.java)
-//        stopService(intent)
-//    }
+    private fun initalHCSR04() {
+        try {
+            hcsr04 = Hcsr04(GpioBordManager.PIN_37_BCM26, GpioBordManager.PIN_38_BCM20)
+        } catch (e: IOException) { // couldn't configure the device...
+        }
+    }
+
+    private fun intialLCD() {
+        mLcd = try {
+            Hd44780(
+                i2c1,
+                Hd44780.I2cAddress.PCF8574T,
+                Hd44780.Geometry.LCD_8X1, false
+            )
+        } catch (e: IOException) {
+            Log.e(TAG, "Error while opening LCD", e)
+            throw RuntimeException(e)
+        }
+        Log.d(TAG, "LCD activity created")
+    }
+
 
     private fun startServer(port: Int) {
         mHttpServer = AndroidWebServer(NetWorkUtils.getLocalIpAddress(this), port, this)
@@ -137,20 +177,22 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
         pwm0 = pioService.openPwm(GpioBordManager.getPWMPort(0))
         pwm1 = pioService.openPwm(GpioBordManager.getPWMPort(1))
         i2c1 = GpioBordManager.getI2CPort()
-        buttonGpio4 = pioService.openGpio(GpioBordManager.PIN_07_BCM4)
-        buttonGpio17 = pioService.openGpio(GpioBordManager.PIN_11_BCM17)
+//        buttonGpio4 = pioService.openGpio(GpioBordManager.PIN_07_BCM4)
+//        buttonGpio17 = pioService.openGpio(GpioBordManager.PIN_11_BCM17)
         //left
         buttonGpio27 = pioService.openGpio(GpioBordManager.PIN_13_BCM27)
         buttonGpio22 = pioService.openGpio(GpioBordManager.PIN_15_BCM22)
+
         //right
         buttonGpio23 = pioService.openGpio(GpioBordManager.PIN_16_BCM23)
         buttonGpio24 = pioService.openGpio(GpioBordManager.PIN_18_BCM24)
+
         //for distance check
 //        buttonGpio21 = pioService.openGpio(GpioBordManager.PIN_40_BCM21)
 //        buttonGpio26 = pioService.openGpio(GpioBordManager.PIN_37_BCM26)
 
-        buttonGpio4.setDirection(Gpio.DIRECTION_OUT_INITIALLY_HIGH)
-        buttonGpio17.setDirection(Gpio.DIRECTION_OUT_INITIALLY_HIGH)
+//        buttonGpio4.setDirection(Gpio.DIRECTION_OUT_INITIALLY_HIGH)
+//        buttonGpio17.setDirection(Gpio.DIRECTION_OUT_INITIALLY_HIGH)
         //for driver
         buttonGpio22.setDirection(Gpio.DIRECTION_OUT_INITIALLY_HIGH)
         buttonGpio27.setDirection(Gpio.DIRECTION_OUT_INITIALLY_HIGH)
@@ -163,26 +205,50 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
         buttonGpio22.value = b
         buttonGpio23.value = c
         buttonGpio24.value = d
+        Log.d(
+            TAG,
+            " ===> ${buttonGpio27.value} === ${buttonGpio22.value} === ${buttonGpio23.value} ===${buttonGpio24.value}"
+        )
     }
 
     fun forward() {
+        Log.d(
+            TAG,
+            "forward() ===> "
+        )
         direction(true, false, true, false)
     }
 
 
     fun backward() {
+        Log.d(
+            TAG,
+            "backward() ===>"
+        )
         direction(false, true, false, true)
     }
 
     fun left() {
-        direction(true, false, false, false)
-    }
-
-    fun right() {
+        Log.d(
+            TAG,
+            "Left() ===> "
+        )
         direction(false, false, true, false)
     }
 
+    fun right() {
+        Log.d(
+            TAG,
+            "Right() ===>"
+        )
+        direction(true, false, false, false)
+    }
+
     fun stop() {
+        Log.d(
+            TAG,
+            "stop() ===>"
+        )
         direction(false, false, false, false)
     }
 
@@ -208,10 +274,23 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
         pwm1.setEnabled(false)
     }
 
+    fun disableOled() {
+        // remove pending runnable from the handler
+        mHandler.removeCallbacks(mDrawRunnable)
+        // Close the device.
+        try {
+            mScreen?.close()
+        } catch (e: IOException) {
+            Log.e(TAG, "Error closing SH1106", e)
+        } finally {
+            mScreen = null
+        }
+    }
 
     override fun onDestroy() {
         mHttpServer?.stop()
-        disableLCD()
+//        disableLCD()
+//        disableOled()
         stopDistance()
         stop()
         pwmCenter()
@@ -253,18 +332,165 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
         val TAG = "CarSys"
     }
 
-    override fun onDirectionChanged(direction: String?) {
+    override fun onDirectionChanged(direction: Direction?) {
         when (direction) {
-            "Forward" -> forward()
-            "Backward" -> backward()
-            "Left" -> left()
-            "Right" -> right()
-            "Stop" -> stop()
+            Direction.Forward -> {
+//                showText(Direction.Forward.toString())
+                forward()
+            }
+            Direction.Backward -> {
+//                showText("Back")
+                backward()
+            }
+            Direction.Left -> {
+//                showText(Direction.Left.toString())
+                left()
+            }
+            Direction.Right -> {
+//                showText(Direction.Right.toString())
+                right()
+            }
+            Direction.Stop -> {
+                showText(Direction.Stop.toString())
+                stop()
+            }
+
         }
     }
 
     fun disableLCD() {
         // disconnect from the display to free resources
-        lcd.disconnect()
+        try {
+            mLcd!!.close()
+        } catch (e: IOException) {
+            Log.e(TAG, "Error closing Hd44780", e)
+        } finally {
+            mLcd = null
+        }
     }
+
+    private fun showText(text: String, second: Long = 3) {
+        if (null != mLcd) {
+            mLcd!!.setBacklight(true)
+            mLcd!!.cursorHome()
+            mLcd!!.setBlinkOn(true)
+            mLcd!!.clearDisplay()
+//            mLcd!!.setCursorOn(true)
+            mLcd!!.setDisplayOn(true)
+            mLcd!!.scrollDisplayRight()
+            mLcd!!.setText(text)
+            delay(second)
+        }
+    }
+
+    private fun delay(second: Long) {
+        SystemClock.sleep(second * 1000)
+    }
+
+    interface ServiceCallBack {
+        fun onBindingService()
+        fun onUnBindingService()
+    }
+
+    val mDrawRunnable: Runnable = object : Runnable {
+        override fun run() {
+            // exit Runnable if the device is already closed
+            if (mScreen == null) {
+                return
+            }
+            mScreen?.clearPixels()
+            mTick++
+            try {
+                when (mMode) {
+                    Modes.DOTS ->
+                        drawExpandingDots()
+
+                    Modes.BITMAP ->
+                        drawMovingBitmap()
+                    else ->
+                        drawCrosshairs()
+
+                }
+                mScreen?.show()
+                mHandler.postDelayed(this, 1000L / FPS)
+            } catch (e: IOException) {
+                Log.e(TAG, "Exception during screen update", e)
+            }
+        }
+
+    }
+
+    /**
+     * Draws crosshair pattern.
+     */
+    private fun drawCrosshairs() {
+        mScreen?.clearPixels()
+        var y: Int = mTick % mScreen!!.lcdHeight
+        for (x in 0..mScreen?.lcdWidth!!) {
+            mScreen?.setPixel(x, y, true)
+            mScreen?.setPixel(x, mScreen?.lcdHeight!! - (y + 1), true)
+        }
+        var x = mTick % mScreen?.lcdWidth!!
+        for (y in 0..mScreen!!.lcdHeight) {
+            mScreen?.setPixel(x, y, true)
+            mScreen?.setPixel(mScreen?.lcdWidth!! - (x + 1), y, true)
+        }
+    }
+
+    private fun drawExpandingDots() {
+        if (mExpandingPixels) {
+            for (x in 0..mScreen?.lcdWidth!!) {
+                for (y in 0..mScreen?.lcdHeight!!) {
+                    if (mMode == Modes.DOTS) {
+                        mScreen?.setPixel(x, y, (x % mDotMod) == 1 && (y % mDotMod) == 1)
+                    } else {
+                        break
+                    }
+                }
+            }
+            mDotMod++
+            if (mDotMod > mScreen?.lcdHeight!!) {
+                mExpandingPixels = false
+                mDotMod = mScreen?.lcdHeight!!
+            }
+        } else {
+            for (x in 0..mScreen?.lcdWidth!!) {
+                for (y in 0..mScreen!!.lcdHeight) {
+                    if (mMode == Modes.DOTS) {
+                        mScreen?.setPixel(x, y, (x % mDotMod) == 1 && (y % mDotMod) == 1)
+                    } else {
+                        break
+                    }
+
+                }
+            }
+            mDotMod--
+            if (mDotMod < 1) {
+                mExpandingPixels = true
+                mDotMod = 1
+            }
+        }
+    }
+
+    private fun drawMovingBitmap() {
+        if (mBitmap == null) {
+            mBitmap = BitmapFactory.decodeResource(resources, R.drawable.android)
+        }
+        // Move the bmp every few ticks
+        if (mTick % BITMAP_FRAMES_PER_MOVE == 0) {
+            mScreen?.clearPixels()
+            // Move the bitmap back and forth based on mBitmapMod:
+            // 0 - left aligned
+            // 1 - centered
+            // 2 - right aligned
+            // 3 - centered
+            val diff: Int = mScreen?.lcdWidth?.minus(mBitmap?.width!!) ?: 0
+            val mult = if (mBitmapMod == 3) 1 else mBitmapMod// 0, 1, or 2
+            val offset = mult * (diff / 2)
+            BitmapHelper.setBmpData(mScreen, offset, 0, mBitmap, true)
+            mBitmapMod = (mBitmapMod + 1) % 4
+        }
+    }
+
+
 }
