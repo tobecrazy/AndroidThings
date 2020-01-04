@@ -233,7 +233,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
             TAG,
             "Left() ===> "
         )
-        direction(true, false, false, false)
+        direction(false, false, true, false)
     }
 
     fun right() {
@@ -241,7 +241,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener,
             TAG,
             "Right() ===>"
         )
-        direction(false, false, true, false)
+        direction(true, false, false, false)
     }
 
     fun stop() {
